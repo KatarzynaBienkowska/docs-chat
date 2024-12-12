@@ -14,8 +14,8 @@ def response(message, history):
             history_langchain_format.append(AIMessage(content=msg["content"]))
     
     history_langchain_format.append(HumanMessage(content=message))
-    llm_resposne = llm.invoke(history_langchain_format)
+    llm_response = llm.invoke(history_langchain_format)
 
-    return llm_resposne.content
+    return llm_response.content
 
 gr.ChatInterface(response, type="messages").launch()
