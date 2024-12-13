@@ -2,7 +2,8 @@ import gradio as gr
 import os
 
 from functions.chat import llm_response, new_chat
-from functions.files import upload_file
+from functions.files import upload_file, delete_files
+from logo import logo
 
 if not os.path.exists("data"):
     os.makedirs("data")
@@ -10,15 +11,21 @@ if not os.path.exists("data"):
 if not os.path.exists("conversation_history"):
     os.makedirs("conversation_history")
 
-with gr.Blocks(title="DocsChat", theme="soft") as app:
+with gr.Blocks(title="DocsChat", theme=gr.themes.Ocean(font=[gr.themes.GoogleFont("Lato")])) as app:
     current_persona = gr.State(None)
     chat_history = gr.State([])
     current_chat = gr.State(None)
 
     chat_history.value = os.listdir("conversation_history")
 
+    persona_map = {
+        "Manager Assistant": "manager",
+        "Engineer Assistant": "engineer",
+    }
+    persona_choices = ["Default"] + list(persona_map.keys())
+
     def set_current_persona(value):
-        current_persona.value = value
+        current_persona.value = persona_map.get(value, "default")
         current_chat.value = None
         chat_history.value = os.listdir("conversation_history")
 
@@ -27,10 +34,15 @@ with gr.Blocks(title="DocsChat", theme="soft") as app:
             current_chat.value = value
         else:
             current_chat.value = None
+        chat_history.value = os.listdir("conversation_history")
 
     with gr.Row():
         with gr.Column(scale=1):
-            gr.Markdown("# DocsChat\n Simply chat with your documents.")
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.HTML(f"<div style='display: flex; align-items: center; gap: 10px;'>{logo}<h1>DocsChat</h1><div>")
+                    gr.Markdown("Simply chat with your documents.")
+
             with gr.Tabs():
                 with gr.TabItem("Chat"):
                     with gr.Row():
@@ -38,7 +50,7 @@ with gr.Blocks(title="DocsChat", theme="soft") as app:
                             gr.Markdown("## New Chat")
                             with gr.Group():
                                 list_of_personas = gr.Dropdown(label="Select Chat Persona",
-                                                               choices=["default", "funny", "professional"],
+                                                               choices=persona_choices,
                                                                type="value",
                                                                value=current_persona.value
                                                                )
@@ -72,14 +84,21 @@ with gr.Blocks(title="DocsChat", theme="soft") as app:
                     with gr.Row():
                         with gr.Column(scale=1):
                             with gr.Group():
-                                file_uploader = gr.File(label="Upload File")
+                                file_uploader = gr.File(label="Upload File", file_types=[".pdf"])
                                 upload_button = gr.Button("Upload")
 
                                 upload_button.click(upload_file, file_uploader)
 
                         with gr.Column(scale=1):
                             with gr.Group():
-                                file_explorer = gr.FileExplorer(root_dir="data", label="Uploaded Files")
-                                delete_button = gr.Button("Delete Selected")
+                                delete_button = gr.Button("Delete Selected", variant="primary", render=False)
+
+                                @gr.render(triggers=[app.load, upload_button.click, delete_button.click])
+                                def uploaded_files():
+                                    file_explorer = gr.FileExplorer(root_dir="data", label="Uploaded Files")
+
+                                    delete_button.click(delete_files, file_explorer)
+
+                                delete_button.render()
 
 app.launch()

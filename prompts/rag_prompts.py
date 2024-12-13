@@ -1,0 +1,9 @@
+def standard_rag_prompt(message, context):
+    prompt = f"""
+        Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know.
+        User Messsage: {message}
+        Context: {context}
+        Answer:
+    """
+
+    return prompt

@@ -2,7 +2,8 @@ from langchain_openai import ChatOpenAI
 from langchain.schema.messages import HumanMessage, AIMessage, SystemMessage
 import gradio as gr
 import json
-from prompts import system_prompts
+from prompts import rag_prompts, system_prompts
+from .document_processor import get_relevant_context
 
 llm = ChatOpenAI(model="gpt-4o-mini")
 
@@ -32,6 +33,10 @@ def llm_response(message, history):
                 else:
                     chat_name = msg["content"]
                 break
+    
+    # Get relevant context from vector store
+    relevant_docs = get_relevant_context(message)
+    context = "\n".join([doc.page_content for doc in relevant_docs])
 
     for msg in history:
         if msg["role"] == "user":
@@ -41,7 +46,7 @@ def llm_response(message, history):
         elif msg["role"] == "system":
             history_langchain_format.append(SystemMessage(content=msg["content"]))
     
-    history_langchain_format.append(HumanMessage(content=message))
+    history_langchain_format.append(HumanMessage(content=rag_prompts.standard_rag_prompt(message, context)))
     llm_response = llm.invoke(history_langchain_format)
 
     append_history_to_file(message, "user", f"conversation_history/{chat_name}.json")
@@ -52,22 +57,22 @@ def llm_response(message, history):
 def new_chat(persona="default", filename=None):
     print(f"New chat with system prompt: {persona}")
 
-    if persona == "funny":
+    if persona == "manager":
         system_prompt = [
-            {"role": "system", "content": system_prompts.funny}
+            {"role": "system", "content": system_prompts.manager}
         ]
-    elif persona == "professional":
+    elif persona == "engineer":
         system_prompt = [
-            {"role": "system", "content": "Only respond in very formal, british language."}
+            {"role": "system", "content": system_prompts.engineer}
         ]
     else:
         system_prompt = []
 
     if not filename:
-        chatbot = gr.Chatbot(height=800, type="messages", value=system_prompt)
+        chatbot = gr.Chatbot(height=400, type="messages", value=system_prompt)
     else: 
         with open(f"conversation_history/{filename}", "r") as f:
             history = json.load(f)
-        chatbot = gr.Chatbot(height=800, type="messages", value=history)
+        chatbot = gr.Chatbot(height=400, type="messages", value=history)
 
     return chatbot
