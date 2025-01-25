@@ -66,7 +66,9 @@ def new_chat(persona="default", filename=None):
             {"role": "system", "content": system_prompts.engineer}
         ]
     else:
-        system_prompt = []
+        system_prompt = [
+            {"role": "system", "content": system_prompts.default}
+        ]
 
     if not filename:
         chatbot = gr.Chatbot(height=400, type="messages", value=system_prompt)
